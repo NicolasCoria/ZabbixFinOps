@@ -4,6 +4,7 @@
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1.34-777BB4.svg)](https://php.net)
 
 A Zabbix frontend module that identifies **underutilized servers** by analyzing historical metrics, helping teams reduce infrastructure costs through data-driven right-sizing recommendations.
+<img width="1600" height="744" alt="image" src="https://github.com/user-attachments/assets/f6118adc-6d44-453c-baee-0b6559a5c030" />
 
 
 ##  Features
