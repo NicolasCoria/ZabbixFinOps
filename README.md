@@ -1,7 +1,7 @@
 # Zabbix FinOps Toolkit
 
 [![Zabbix Version](https://img.shields.io/badge/Zabbix-7.0%20to%207.4-red.svg)](https://www.zabbix.com)
-[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.0-777BB4.svg)](https://php.net)
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1.34-777BB4.svg)](https://php.net)
 
 A Zabbix frontend module that identifies **underutilized servers** by analyzing historical metrics, helping teams reduce infrastructure costs through data-driven right-sizing recommendations.
 
