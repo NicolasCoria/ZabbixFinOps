@@ -15,7 +15,7 @@ private const RAM_AVG_THRESHOLD   = 40;
 private const CPU_MAX_THRESHOLD   = 60;
 private const RAM_MAX_THRESHOLD   = 80;
 private const DISK_HIGH_THRESHOLD = 85;
-private const RIGHT_SIZE_MARGIN   = 1.3;
+private const RIGHT_SIZE_FACTOR = 0.80;
 
 private const ITEM_KEY_CPU       = 'system.cpu.util';
 private const ITEM_KEY_RAM_UTIL  = 'vm.memory.utilization';
@@ -297,19 +297,21 @@ return round((float) $row_last['avg_val'] - (float) $row_first['avg_val'], 2);
 
 private function calculateRightSizing(array $r): array {
 if ($r['cpu_p95'] !== null && $r['cpu_p95'] > 0 && $r['cpu_count'] !== null && $r['cpu_count'] > 0) {
-$cpu_needed = ($r['cpu_p95'] / 100) * $r['cpu_count'] * self::RIGHT_SIZE_MARGIN;
-$recommended = $this->roundToCommonCpu(max(1, $cpu_needed));
+$target = $r['cpu_count'] * self::RIGHT_SIZE_FACTOR;
+$actual_need = ($r['cpu_p95'] / 100) * $r['cpu_count'];
+$recommended = $this->roundToCommonCpu(max(1, $target));
 
-if ($recommended < $r['cpu_count']) {
+if ($recommended >= $actual_need && $recommended < $r['cpu_count']) {
 $r['cpu_recommended'] = $recommended;
 }
 }
 
 if ($r['ram_p95'] !== null && $r['ram_p95'] > 0 && $r['ram_total_gb'] !== null && $r['ram_total_gb'] > 0) {
-$ram_needed = ($r['ram_p95'] / 100) * $r['ram_total_gb'] * self::RIGHT_SIZE_MARGIN;
-$recommended = $this->roundToCommonRam(max(2, $ram_needed));
+$target = $r['ram_total_gb'] * self::RIGHT_SIZE_FACTOR;
+$actual_need = ($r['ram_p95'] / 100) * $r['ram_total_gb'];
+$recommended = $this->roundToCommonRam(max(2, $target));
 
-if ($recommended < $r['ram_total_gb']) {
+if ($recommended >= $actual_need && $recommended < $r['ram_total_gb']) {
 $r['ram_recommended_gb'] = $recommended;
 }
 }

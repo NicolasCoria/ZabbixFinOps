@@ -34,8 +34,8 @@ class CostAnalyzer extends CController {
 	private const ITEM_KEY_CPU_NUM   = 'system.cpu.num';
 	private const ITEM_KEY_RAM_TOTAL = 'vm.memory.size[total]';
 
-	// Right-sizing safety margin (30%).
-	private const RIGHT_SIZE_MARGIN = 1.3;
+	// Right-sizing: recommend 80% of current allocation.
+	private const RIGHT_SIZE_FACTOR = 0.80;
 
 	protected function init(): void {
 		$this->disableCsrfValidation();
@@ -532,24 +532,26 @@ class CostAnalyzer extends CController {
 	 * Only suggests reduction when recommended < current.
 	 */
 	private function calculateRightSizing(array $r): array {
-		// CPU right-sizing: P95% × current_vCPUs × 1.3 margin, rounded to common sizes.
-		// Skip if P95 is 0% (likely bad/missing data).
+		// CPU: recommend 80% of current vCPUs, but never below P95 actual usage.
 		if ($r['cpu_p95'] !== null && $r['cpu_p95'] > 0 && $r['cpu_count'] !== null && $r['cpu_count'] > 0) {
-			$cpu_needed = ($r['cpu_p95'] / 100) * $r['cpu_count'] * self::RIGHT_SIZE_MARGIN;
-			$recommended = $this->roundToCommonCpu(max(1, $cpu_needed));
+			$target = $r['cpu_count'] * self::RIGHT_SIZE_FACTOR;
+			$actual_need = ($r['cpu_p95'] / 100) * $r['cpu_count'];
+			$recommended = $this->roundToCommonCpu(max(1, $target));
 
-			if ($recommended < $r['cpu_count']) {
+			// Safety: don't recommend below actual P95 usage.
+			if ($recommended >= $actual_need && $recommended < $r['cpu_count']) {
 				$r['cpu_recommended'] = $recommended;
 			}
 		}
 
-		// RAM right-sizing: P95% × total_GB × 1.3 margin, rounded to common sizes.
-		// Skip if P95 is 0% (likely bad/missing data). Minimum recommendation: 2 GB.
+		// RAM: recommend 80% of current GB, but never below P95 actual usage. Minimum 2 GB.
 		if ($r['ram_p95'] !== null && $r['ram_p95'] > 0 && $r['ram_total_gb'] !== null && $r['ram_total_gb'] > 0) {
-			$ram_needed = ($r['ram_p95'] / 100) * $r['ram_total_gb'] * self::RIGHT_SIZE_MARGIN;
-			$recommended = $this->roundToCommonRam(max(2, $ram_needed));
+			$target = $r['ram_total_gb'] * self::RIGHT_SIZE_FACTOR;
+			$actual_need = ($r['ram_p95'] / 100) * $r['ram_total_gb'];
+			$recommended = $this->roundToCommonRam(max(2, $target));
 
-			if ($recommended < $r['ram_total_gb']) {
+			// Safety: don't recommend below actual P95 usage.
+			if ($recommended >= $actual_need && $recommended < $r['ram_total_gb']) {
 				$r['ram_recommended_gb'] = $recommended;
 			}
 		}

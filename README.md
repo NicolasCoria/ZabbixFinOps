@@ -108,23 +108,25 @@ Beyond detecting waste, the module suggests **concrete right-sizing targets** �
 **Formula:**
 
 ```
-recommended = P95_usage% × current_allocation × 1.3 (safety margin)
+recommended = current_allocation × 0.80
 ```
+
+The module recommends **80% of the current allocation**, rounded to common VM sizes. A safety check ensures the recommendation is never below the server's actual P95 peak usage.
 
 | Step | Description |
 |------|-------------|
 | 1. Read current specs | `system.cpu.num` (vCPUs) and `vm.memory.size[total]` (RAM bytes) |
-| 2. Multiply P95 by allocation | How much the server actually needs at the 95th percentile |
-| 3. Add 30% safety margin | Prevents cutting too close to real peak usage |
+| 2. Calculate 80% of current | `target = current × 0.80` |
+| 3. Safety check | Ensure `target ≥ P95 actual usage` — if not, no recommendation is made |
 | 4. Round to common VM sizes | vCPU: 1, 2, 4, 8, 16, 32, 48, 64, 96, 128 — RAM: 2, 4, 8, 16, 32, 64, 128, 256, 512 GB |
 
 **Example:**
 
 | Host | vCPUs | vCPU Rec. | RAM | RAM Rec. |
 |------|-------|-----------|-----|----------|
-| api-prod-01 | 8 vCPU | 4 vCPU | 32 GB | 16 GB |
+| api-prod-01 | 8 vCPU | 4 vCPU | 32 GB | 32 GB (—) |
 
-> A server with 8 vCPUs and CPU P95 of 21% → needs `0.21 × 8 × 1.3 = 2.18` → rounds to **4 vCPU**.
+> A server with 8 vCPUs → 80% = 6.4 → rounds to **4 vCPU**. P95 CPU usage is 21% (1.68 vCPU actual) — 4 ≥ 1.68, so the recommendation is safe.
 
 **Notes:**
 - Recommendations only appear when the suggested size is **smaller** than current (no upsizing suggestions).
@@ -132,8 +134,9 @@ recommended = P95_usage% × current_allocation × 1.3 (safety margin)
 - The "—" symbol means no reduction is recommended (current size is already optimal or near-optimal).
 
 **Safeguards:**
-- **P95 = 0%** → recommendation is skipped entirely. A 0% P95 usually indicates missing or broken metric data, so the module won't suggest a reduction based on unreliable numbers.
-- **Minimum RAM: 2 GB** — even if the formula calculates a lower value, the module never recommends less than 2 GB. No server can run reliably below this threshold.
+- **P95 = 0%** → recommendation is skipped entirely (likely missing or broken data).
+- **P95 safety floor** → if 80% of current would be below actual P95 usage, no recommendation is made.
+- **Minimum RAM: 2 GB** — the module never recommends less than 2 GB.
 - **Minimum vCPU: 1** — the module never recommends less than 1 vCPU.
 - Common VM sizes used for rounding: vCPU `1, 2, 4, 8, 16, 32, 48, 64, 96, 128` — RAM `2, 4, 8, 16, 32, 64, 128, 256, 512 GB`.
 
