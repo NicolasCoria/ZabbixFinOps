@@ -1,0 +1,32 @@
+{
+    "manifest_version": 2,
+    "id": "zabbix-finops-toolkit",
+    "type": "module",
+    "name": "Zabbix FinOps Toolkit",
+    "namespace": "ZabbixFinOpsToolkit",
+    "version": "1.0.0",
+    "author": "FinOps Team",
+    "url": "",
+    "description": "Identifies underutilized servers by analyzing CPU, RAM, disk, network and load average metrics. Calculates Waste Score, Efficiency Score and growth trends to recommend infrastructure right-sizing.",
+    "requires": {
+        "min": "7.0.0",
+        "max": "7.4.99"
+    },
+    "actions": {
+        "finops.costanalyzer.view": {
+            "class": "CostAnalyzer",
+            "layout": "layout.htmlpage",
+            "view": "finops.costanalyzer.view"
+        },
+        "finops.costanalyzer.csv": {
+            "class": "CostAnalyzerCsvExport",
+            "layout": "layout.csv",
+            "view": "finops.costanalyzer.csv"
+        }
+    },
+    "assets": {
+        "css": ["finops-toolkit.css"],
+        "js": ["finops-toolkit.js"]
+    },
+    "config": {}
+}

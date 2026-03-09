@@ -1,0 +1,718 @@
+/* ==========================================================================
+   Zabbix FinOps Toolkit - Neo-Brutalist Dark Edition
+   Technical, sharp, tool-like interface for infrastructure cost analysis
+   Dark theme compatible with Zabbix
+   ========================================================================== */
+
+/* ==========================================================================
+   CSS VARIABLES - Brutalist Dark Design System
+   ========================================================================== */
+:root {
+    /* Core Palette - Dark Theme */
+    --finops-bg-primary: #1a1a1a;
+    --finops-bg-secondary: #242424;
+    --finops-bg-tertiary: #2d2d2d;
+    --finops-bg-card: #0f0f0f;
+    --finops-bg-header: #0a0a0a;
+
+    /* Text Colors - High Contrast on Dark */
+    --finops-text-primary: #f5f5f5;
+    --finops-text-secondary: #b0b0b0;
+    --finops-text-muted: #666666;
+    --finops-text-inverse: #0a0a0a;
+
+    /* Accent Colors */
+    --finops-accent: #ff3333;
+    --finops-accent-dim: #cc0000;
+    --finops-success: #22c55e;
+    --finops-warning: #eab308;
+
+    /* Borders - Heavy */
+    --finops-border-width: 2px;
+    --finops-border-color: #404040;
+    --finops-border-strong: #f5f5f5;
+    --finops-border-accent: #ff3333;
+
+    /* Typography */
+    --finops-font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+    --finops-font-sans: 'Helvetica Neue', 'Arial', system-ui, sans-serif;
+
+    /* Spacing */
+    --finops-space-xs: 4px;
+    --finops-space-sm: 8px;
+    --finops-space-md: 16px;
+    --finops-space-lg: 24px;
+    --finops-space-xl: 32px;
+
+    /* Shadows - Hard, directional */
+    --finops-shadow: 4px 4px 0px #000000;
+    --finops-shadow-sm: 2px 2px 0px #000000;
+}
+
+/* ==========================================================================
+   BASE STYLES & CONTAINER
+   ========================================================================== */
+.finops-container {
+    font-family: var(--finops-font-sans);
+    background: var(--finops-bg-primary);
+    min-height: 100vh;
+    color: var(--finops-text-primary);
+    line-height: 1.5;
+    padding-bottom: var(--finops-space-xl);
+}
+
+/* ==========================================================================
+   HEADER SECTION
+   ========================================================================== */
+.finops-header {
+    background: var(--finops-bg-header);
+    border-bottom: var(--finops-border-width) solid var(--finops-border-strong);
+    padding: var(--finops-space-xl);
+}
+
+.finops-header-inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--finops-space-lg);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.finops-title-block {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--finops-space-md);
+}
+
+.finops-logo {
+    width: 48px;
+    height: 48px;
+    background: var(--finops-text-primary);
+    color: var(--finops-text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--finops-font-mono);
+    font-size: 20px;
+    font-weight: 800;
+    border: var(--finops-border-width) solid var(--finops-text-primary);
+    box-shadow: var(--finops-shadow-sm);
+    flex-shrink: 0;
+}
+
+.finops-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--finops-space-xs);
+}
+
+.finops-title {
+    font-family: var(--finops-font-sans);
+    font-size: 26px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+    color: var(--finops-text-primary);
+    line-height: 1.1;
+}
+
+.finops-subtitle {
+    font-family: var(--finops-font-mono);
+    font-size: 12px;
+    color: var(--finops-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.finops-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--finops-space-md);
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+.finops-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--finops-space-sm);
+    padding: 12px 20px;
+    font-family: var(--finops-font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: var(--finops-border-width) solid var(--finops-border-strong);
+    background: var(--finops-bg-card);
+    color: var(--finops-text-primary);
+    cursor: pointer;
+    box-shadow: var(--finops-shadow-sm);
+    transition: all 0.1s ease;
+    text-decoration: none;
+}
+
+.finops-btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+    background: var(--finops-bg-secondary);
+}
+
+.finops-btn-primary {
+    background: var(--finops-text-primary);
+    color: var(--finops-text-inverse);
+    border-color: var(--finops-text-primary);
+}
+
+.finops-btn-primary:hover {
+    background: var(--finops-text-secondary);
+    border-color: var(--finops-text-secondary);
+}
+
+.finops-btn-accent {
+    background: var(--finops-bg-card);
+    border-color: var(--finops-accent);
+    color: var(--finops-accent);
+}
+
+.finops-btn-accent:hover {
+    background: var(--finops-accent);
+    color: var(--finops-text-primary);
+}
+
+/* ==========================================================================
+   FILTER SECTION
+   ========================================================================== */
+.finops-filter-section {
+    background: var(--finops-bg-secondary);
+    border-bottom: var(--finops-border-width) solid var(--finops-border-color);
+    padding: var(--finops-space-lg) var(--finops-space-xl);
+}
+
+.finops-filter-inner {
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.finops-filter-form {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--finops-space-md);
+    flex-wrap: wrap;
+}
+
+.finops-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--finops-space-xs);
+    flex: 1;
+    min-width: 280px;
+    max-width: 400px;
+}
+
+.finops-filter-label {
+    font-family: var(--finops-font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--finops-text-secondary);
+}
+
+/* Override Zabbix multiselect for dark theme */
+.finops-filter-form .multiselect-control {
+    background: var(--finops-bg-card) !important;
+    border: 2px solid var(--finops-border-color) !important;
+    border-radius: 0 !important;
+    box-shadow: var(--finops-shadow-sm) !important;
+    color: var(--finops-text-primary) !important;
+}
+
+.finops-filter-form .multiselect-control:focus-within {
+    border-color: var(--finops-text-primary) !important;
+    outline: 2px solid var(--finops-accent) !important;
+    outline-offset: 2px !important;
+}
+
+.finops-filter-form .multiselect-button {
+    background: var(--finops-bg-card) !important;
+    color: var(--finops-text-primary) !important;
+    border-color: var(--finops-border-color) !important;
+}
+
+.finops-filter-form .multiselect-button:after {
+    border-top-color: var(--finops-text-secondary) !important;
+}
+
+/* ==========================================================================
+   SUMMARY SECTION
+   ========================================================================== */
+.finops-summary-section {
+    padding: var(--finops-space-xl);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.finops-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--finops-space-md);
+}
+
+@media (max-width: 1200px) {
+    .finops-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .finops-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.finops-stat-card {
+    background: var(--finops-bg-card);
+    border: var(--finops-border-width) solid var(--finops-border-color);
+    padding: var(--finops-space-lg);
+    box-shadow: var(--finops-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: var(--finops-space-sm);
+    position: relative;
+}
+
+.finops-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--finops-border-color);
+}
+
+.finops-stat-card--warning::before {
+    background: var(--finops-warning);
+}
+
+.finops-stat-card--warning {
+    border-color: var(--finops-warning);
+}
+
+.finops-stat-card--critical::before {
+    background: var(--finops-accent);
+}
+
+.finops-stat-card--critical {
+    border-color: var(--finops-accent);
+    background: #1a0a0a;
+}
+
+.finops-stat-label {
+    font-family: var(--finops-font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--finops-text-muted);
+}
+
+.finops-stat-card--critical .finops-stat-label {
+    color: var(--finops-accent);
+}
+
+.finops-stat-card--warning .finops-stat-label {
+    color: var(--finops-warning);
+}
+
+.finops-stat-value {
+    font-family: var(--finops-font-mono);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--finops-text-primary);
+}
+
+.finops-stat-card--critical .finops-stat-value {
+    color: var(--finops-accent);
+}
+
+.finops-stat-card--warning .finops-stat-value {
+    color: var(--finops-warning);
+}
+
+.finops-stat-unit {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--finops-text-muted);
+}
+
+/* ==========================================================================
+   TABLE SECTION
+   ========================================================================== */
+.finops-table-section {
+    padding: 0 var(--finops-space-xl) var(--finops-space-xl);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.finops-table-wrapper {
+    background: var(--finops-bg-card);
+    border: var(--finops-border-width) solid var(--finops-border-color);
+    box-shadow: var(--finops-shadow);
+    overflow-x: auto;
+}
+
+.finops-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.finops-table thead {
+    background: var(--finops-bg-secondary);
+    border-bottom: var(--finops-border-width) solid var(--finops-border-strong);
+}
+
+.finops-table th {
+    font-family: var(--finops-font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--finops-text-primary);
+    padding: var(--finops-space-sm) var(--finops-space-xs);
+    text-align: left;
+    white-space: nowrap;
+    border-right: 1px solid var(--finops-border-color);
+}
+
+.finops-table th:last-child {
+    border-right: none;
+}
+
+.finops-table th.sortable a {
+    color: var(--finops-text-primary);
+    text-decoration: none;
+}
+
+.finops-table th.sortable:hover {
+    background: var(--finops-bg-tertiary);
+}
+
+.finops-table th .sort-indicator {
+    margin-left: var(--finops-space-xs);
+    opacity: 0.5;
+    color: var(--finops-text-muted);
+}
+
+.finops-table th.sort-asc .sort-indicator,
+.finops-table th.sort-desc .sort-indicator {
+    opacity: 1;
+    color: var(--finops-accent);
+}
+
+.finops-table td {
+    padding: var(--finops-space-sm) var(--finops-space-xs);
+    border-bottom: 1px solid var(--finops-border-color);
+    border-right: 1px solid var(--finops-border-color);
+    vertical-align: middle;
+    color: var(--finops-text-secondary);
+}
+
+.finops-table td:last-child {
+    border-right: none;
+}
+
+.finops-table tbody tr:hover {
+    background: var(--finops-bg-secondary);
+}
+
+.finops-table tbody tr:hover td {
+    color: var(--finops-text-primary);
+}
+
+.finops-table tbody tr:nth-child(even) {
+    background: #141414;
+}
+
+.finops-table tbody tr:nth-child(even):hover {
+    background: var(--finops-bg-tertiary);
+}
+
+/* High waste row highlight */
+.finops-table tr.finops-row-high-waste {
+    background: #1f0a0a;
+}
+
+.finops-table tr.finops-row-high-waste:hover {
+    background: #2a0f0f;
+}
+
+.finops-table tr.finops-row-high-waste td:first-child {
+    border-left: 3px solid var(--finops-accent);
+}
+
+/* ==========================================================================
+   CELL CONTENT STYLES
+   ========================================================================== */
+.finops-cell-host {
+    font-family: var(--finops-font-mono);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--finops-text-primary);
+}
+
+.finops-cell-group {
+    color: var(--finops-text-muted);
+    font-size: 12px;
+}
+
+.finops-cell-metric {
+    font-family: var(--finops-font-mono);
+    font-weight: 500;
+    text-align: right;
+    color: var(--finops-text-secondary);
+}
+
+.finops-cell-metric--low {
+    color: var(--finops-success);
+}
+
+.finops-cell-metric--medium {
+    color: var(--finops-warning);
+}
+
+.finops-cell-metric--high {
+    color: var(--finops-accent);
+    font-weight: 700;
+}
+
+.finops-cell-metric--na {
+    color: var(--finops-text-muted);
+    font-style: italic;
+}
+
+/* ==========================================================================
+   BADGES
+   ========================================================================== */
+.finops-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    font-family: var(--finops-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    border: 2px solid var(--finops-border-color);
+    background: var(--finops-bg-card);
+    color: var(--finops-text-secondary);
+}
+
+.finops-badge--high {
+    background: var(--finops-accent);
+    color: var(--finops-text-primary);
+    border-color: var(--finops-accent);
+}
+
+.finops-badge--medium {
+    background: transparent;
+    color: var(--finops-warning);
+    border-color: var(--finops-warning);
+}
+
+.finops-badge--low {
+    background: var(--finops-bg-secondary);
+    color: var(--finops-success);
+    border-color: var(--finops-success);
+}
+
+.finops-badge--healthy {
+    background: var(--finops-success);
+    color: var(--finops-text-inverse);
+    border-color: var(--finops-success);
+}
+
+/* ==========================================================================
+   TREND INDICATOR
+   ========================================================================== */
+.finops-trend {
+    font-family: var(--finops-font-mono);
+    font-size: 11px;
+    line-height: 1.6;
+}
+
+.finops-trend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--finops-space-xs);
+}
+
+.finops-trend-up {
+    color: var(--finops-success);
+}
+
+.finops-trend-down {
+    color: var(--finops-accent);
+}
+
+.finops-trend-neutral {
+    color: var(--finops-text-muted);
+}
+
+/* ==========================================================================
+   RECOMMENDATION
+   ========================================================================== */
+.finops-recommendation {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--finops-text-secondary);
+    max-width: 260px;
+}
+
+/* ==========================================================================
+   EMPTY STATE
+   ========================================================================== */
+.finops-empty-state {
+    text-align: center;
+    padding: var(--finops-space-xl);
+    border: 2px dashed var(--finops-border-color);
+    margin: var(--finops-space-lg);
+}
+
+.finops-empty-title {
+    font-family: var(--finops-font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--finops-space-sm);
+    color: var(--finops-text-primary);
+}
+
+.finops-empty-text {
+    color: var(--finops-text-muted);
+    font-size: 13px;
+}
+
+/* ==========================================================================
+   SECTION HEADER
+   ========================================================================== */
+.finops-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--finops-space-md) var(--finops-space-lg);
+    background: var(--finops-bg-header);
+    color: var(--finops-text-primary);
+    border-bottom: var(--finops-border-width) solid var(--finops-border-strong);
+}
+
+.finops-section-title {
+    font-family: var(--finops-font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.finops-section-meta {
+    font-family: var(--finops-font-mono);
+    font-size: 11px;
+    color: var(--finops-text-muted);
+}
+
+/* ==========================================================================
+   TEXT UTILITIES
+   ========================================================================== */
+.finops-text-mono {
+    font-family: var(--finops-font-mono);
+}
+
+.finops-text-right {
+    text-align: right;
+}
+
+.finops-text-center {
+    text-align: center;
+}
+
+.finops-text-muted {
+    color: var(--finops-text-muted);
+}
+
+.finops-hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   ZABBIX INTEGRATION OVERRIDES
+   ========================================================================== */
+.finops-container .tableinfo {
+    border: none;
+    background: transparent;
+}
+
+.finops-container .tableinfo th {
+    background: var(--finops-bg-secondary);
+}
+
+.finops-container .tableinfo td {
+    border-color: var(--finops-border-color);
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 1400px) {
+    .finops-table th,
+    .finops-table td {
+        padding: var(--finops-space-sm);
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .finops-header {
+        padding: var(--finops-space-md);
+    }
+
+    .finops-title {
+        font-size: 20px;
+    }
+
+    .finops-filter-section,
+    .finops-summary-section,
+    .finops-table-section {
+        padding-left: var(--finops-space-md);
+        padding-right: var(--finops-space-md);
+    }
+
+    .finops-stat-value {
+        font-size: 28px;
+    }
+}
+
+/* ==========================================================================
+   SCROLLBAR - Dark Theme
+   ========================================================================== */
+.finops-table-wrapper::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+
+.finops-table-wrapper::-webkit-scrollbar-track {
+    background: var(--finops-bg-secondary);
+}
+
+.finops-table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--finops-border-color);
+    border: 2px solid var(--finops-bg-secondary);
+}
+
+.finops-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--finops-text-muted);
+}
