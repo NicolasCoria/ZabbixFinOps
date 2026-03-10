@@ -33,6 +33,9 @@ $csv .= implode(',', [
 	'"vCPU Recommended"',
 	'"RAM GB"',
 	'"RAM Recommended GB"',
+	'"Current Azure Cost/mo ($)"',
+	'"Rec. Azure Cost/mo ($)"',
+	'"Est. Savings/mo ($)"',
 	'"CPU Trend"',
 	'"RAM Trend"',
 	'"Recommendation"'
@@ -75,6 +78,9 @@ foreach ($data['results'] as $r) {
 		($r['cpu_recommended'] !== null) ? $r['cpu_recommended'] : '',
 		($r['ram_total_gb'] !== null) ? $r['ram_total_gb'] : '',
 		($r['ram_recommended_gb'] !== null) ? $r['ram_recommended_gb'] : '',
+		($r['current_cost'] !== null) ? $r['current_cost'] : '',
+		($r['recommended_cost'] !== null) ? $r['recommended_cost'] : '',
+		($r['monthly_savings'] !== null) ? $r['monthly_savings'] : '',
 		($r['cpu_trend'] !== null) ? $r['cpu_trend'] : '',
 		($r['ram_trend'] !== null) ? $r['ram_trend'] : '',
 		'"'.str_replace('"', '""', $r['recommendation']).'"'

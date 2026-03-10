@@ -12,6 +12,7 @@ A Zabbix frontend module that identifies **underutilized servers** by analyzing 
 - **Waste Score & Efficiency Score** — quantifies how much each server is under or well-utilized
 - **Growth Trend Detection** — compares first week vs. last week averages to avoid premature downsizing
 - **Smart Safeguards** — won't recommend reduction if disk, network or load average are saturated
+- **Azure Cost Estimator** — automatically calculates `$ Savings` per month using the Azure Retail Prices API for hosts tagged as `Azure`.
 - **Sortable & Filterable Table** — filter by host group, sort by any score column
 - **Top 10 Highlight** — visually highlights the most underutilized servers
 - **Color-coded Badges** — 🟢 Healthy, 🟡 Moderate, 🔴 High waste at a glance
@@ -191,6 +192,11 @@ The module will appear in the menu under **Monitoring → Infrastructure Cost An
 | Load Avg | Average system load |
 | Waste Score | How underutilized (higher = more waste) |
 | Efficiency | How well utilized (higher = better) |
+| vCPUs | Current allocated logical cores |
+| vCPU Rec. | Recommended safe logical cores |
+| RAM | Current allocated memory |
+| RAM Rec. | Recommended safe memory size |
+| Est. Savings/mo | If tagged `Azure`, the estimated monthly $ savings of right-sizing |
 | Trend | CPU/RAM usage direction (+ growth, - decline) |
 | Recommendation | Actionable suggestion |
 

@@ -75,9 +75,9 @@ foreach ($results as $r) {
     }
     if ($r['waste_level'] === _('HIGH')) {
         $high_waste_count++;
-        if ($r['waste_score'] !== null) {
-            $potential_savings += ($r['waste_score'] / 100) * 50;
-        }
+    }
+    if (isset($r['monthly_savings']) && $r['monthly_savings'] > 0) {
+        $potential_savings += $r['monthly_savings'];
     }
 }
 $potential_savings = round($potential_savings, 0);
@@ -101,6 +101,12 @@ $summary = (new CDiv([
         (new CSpan(_('Critical Waste')))->addClass('finops-stat-label'),
         (new CSpan((string)$high_waste_count))->addClass('finops-stat-value')
     ]))->addClass('finops-stat-card finops-stat-card--critical'),
+
+    // Potential Savings Card
+    (new CDiv([
+        (new CSpan(_('Est. Azure Savings/mo')))->addClass('finops-stat-label'),
+        (new CSpan('$' . number_format($potential_savings)))->addClass('finops-stat-value finops-text-accent')
+    ]))->addClass('finops-stat-card finops-stat-card--success'),
 
     ]))->addClass('finops-summary-grid');
 
@@ -155,6 +161,7 @@ $header = [
     (new CColHeader(_('vCPU Rec.')))->addClass('finops-text-mono finops-text-right'),
     (new CColHeader(_('RAM')))->addClass('finops-text-mono finops-text-right'),
     (new CColHeader(_('RAM Rec.')))->addClass('finops-text-mono finops-text-right'),
+    (new CColHeader(_('Est. Savings/mo')))->addClass('finops-text-mono finops-text-right'),
     (new CColHeader(_('Trend')))->addClass('finops-text-mono'),
     (new CColHeader(_('Recommendation')))->addClass('finops-text-mono'),
 ];
@@ -330,6 +337,11 @@ foreach ($results as $r) {
             ($r['ram_recommended_gb'] !== null)
                 ? (new CSpan($r['ram_recommended_gb'].' GB'))->addClass('finops-cell-metric finops-cell-metric--low')
                 : (new CSpan('—'))->addClass('finops-cell-metric--na')
+        ))->addClass('finops-cell-metric'),
+        (new CCol(
+            ($r['monthly_savings'] !== null)
+                ? (new CSpan('$'.number_format($r['monthly_savings'], 2)))->addClass('finops-cell-metric finops-cell-metric--success')
+                : (new CSpan('N/A'))->addClass('finops-cell-metric--na')
         ))->addClass('finops-cell-metric'),
         (new CCol(getTrendBrutalist($r['cpu_trend'], $r['ram_trend']))),
         (new CCol(

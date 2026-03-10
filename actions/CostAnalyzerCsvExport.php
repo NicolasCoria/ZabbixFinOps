@@ -60,6 +60,7 @@ $last_week_end    = $now;
 $host_options = [
 'output'            => ['hostid', 'host', 'name'],
 'selectHostGroups'  => ['groupid', 'name'],
+'selectTags'        => ['tag', 'value'],
 'filter'            => ['status' => HOST_STATUS_MONITORED],
 'monitored_hosts'   => true,
 'preservekeys'      => true,
@@ -150,8 +151,20 @@ $r = [
 'cpu_trend'  => null, 'ram_trend' => null,
 'cpu_count'  => null, 'ram_total_gb' => null,
 'cpu_recommended' => null, 'ram_recommended_gb' => null,
+'is_azure'   => false, 'azure_sku' => null, 'current_cost' => null, 'recommended_cost' => null, 'monthly_savings' => null,
 'recommendation' => ''
 ];
+
+if (isset($host['tags']) && is_array($host['tags'])) {
+foreach ($host['tags'] as $tag) {
+if (stripos($tag['tag'], 'azure_sku') !== false) {
+$r['azure_sku'] = trim($tag['value'] ?? '');
+$r['is_azure'] = true;
+} elseif (stripos($tag['tag'], 'azure') !== false || stripos($tag['value'] ?? '', 'azure') !== false) {
+$r['is_azure'] = true;
+}
+}
+}
 
 if (isset($hi['cpu'])) {
 $d = $this->getTrendData($hi['cpu'], $time_from, $now);
@@ -224,6 +237,30 @@ $r['efficiency_score'] = max(0, min(100, round($avg_usage, 1)));
 
 $r['recommendation'] = $this->generateRecommendation($r);
 $r = $this->calculateRightSizing($r);
+
+if ($r['is_azure'] && $r['cpu_count'] !== null && $r['ram_total_gb'] !== null) {
+$r['current_cost'] = $this->estimateAzureCost($r['cpu_count'], $r['ram_total_gb'], $r['azure_sku']);
+
+if ($r['cpu_recommended'] !== null || $r['ram_recommended_gb'] !== null) {
+$rec_cpu = clone $r['cpu_recommended'] ?? clone $r['cpu_count'];
+$rec_ram = clone $r['ram_recommended_gb'] ?? clone $r['ram_total_gb'];
+
+$rec_sku = null;
+if ($r['azure_sku'] !== null) {
+$rec_sku = preg_replace('/([a-zA-Z]+)'.$r['cpu_count'].'([a-zA-Z_]+)/i', '${1}'.$rec_cpu.'${2}', $r['azure_sku']);
+if ($rec_sku === $r['azure_sku']) {
+$rec_sku = null;
+}
+}
+
+$r['recommended_cost'] = $this->estimateAzureCost((int)$rec_cpu, (float)$rec_ram, $rec_sku);
+
+if ($r['current_cost'] !== null && $r['recommended_cost'] !== null && $r['current_cost'] > $r['recommended_cost']) {
+$r['monthly_savings'] = $r['current_cost'] - $r['recommended_cost'];
+}
+}
+}
+
 $results[] = $r;
 }
 
@@ -394,5 +431,103 @@ $spike_parts[] = 'RAM P95: '.$ram_peak.'%';
 }
 
 return 'Mostly idle but periodic spikes ('.implode('; ', $spike_parts).')';
+}
+
+private function estimateAzureCost(int $cpu, float $ram, ?string $exact_sku = null): ?float {
+if ($cpu <= 0 || $ram <= 0) return null;
+
+$cache_file = sys_get_temp_dir() . '/zabbix_finops_azure_rates.json';
+$cache_ttl = 86400; // 24 hours
+
+$cache_data = ['general' => [], 'exact' => []];
+if (file_exists($cache_file) && (time() - filemtime($cache_file)) < $cache_ttl) {
+$raw_cache = file_get_contents($cache_file);
+if ($raw_cache !== false) {
+$decoded = json_decode($raw_cache, true);
+if (is_array($decoded)) {
+if (isset($decoded['general'])) {
+$cache_data = $decoded;
+} else {
+$cache_data['general'] = $decoded;
+}
+}
+}
+}
+
+if (!empty($exact_sku)) {
+if (isset($cache_data['exact'][$exact_sku])) {
+return $cache_data['exact'][$exact_sku];
+}
+
+$url = "https://prices.azure.com/api/retail/prices?\$filter=" . urlencode("serviceName eq 'Virtual Machines' and priceType eq 'Consumption' and armSkuName eq '{$exact_sku}' and not contains(skuName, 'Spot') and not contains(skuName, 'Low Priority')");
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+curl_setopt($ch, CURLOPT_USERAGENT, 'ZabbixFinOpsToolkit/1.0');
+$response = curl_exec($ch);
+curl_close($ch);
+
+if ($response) {
+$data = json_decode($response, true);
+if (isset($data['Items']) && is_array($data['Items']) && !empty($data['Items'])) {
+$monthly_price = $data['Items'][0]['retailPrice'] * 730;
+$cache_data['exact'][$exact_sku] = round($monthly_price, 2);
+file_put_contents($cache_file, json_encode($cache_data));
+return $cache_data['exact'][$exact_sku];
+}
+}
+}
+
+$rates = $cache_data['general'];
+if (empty($rates)) {
+$url = "https://prices.azure.com/api/retail/prices?\$filter=" . urlencode("serviceName eq 'Virtual Machines' and priceType eq 'Consumption' and armRegionName eq 'eastus' and contains(skuName, ' v5') and not contains(skuName, 'Spot') and not contains(skuName, 'Low Priority')");
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+curl_setopt($ch, CURLOPT_USERAGENT, 'ZabbixFinOpsToolkit/1.0');
+$response = curl_exec($ch);
+curl_close($ch);
+
+if ($response) {
+$data = json_decode($response, true);
+if (isset($data['Items']) && is_array($data['Items'])) {
+foreach ($data['Items'] as $item) {
+if (isset($item['armSkuName']) && preg_match('/Standard_D(\d+)s?_?v5/i', $item['armSkuName'], $matches)) {
+$sku_cpu = (int)$matches[1];
+$monthly_price = $item['retailPrice'] * 730;
+
+if (!isset($rates[$sku_cpu]) || $monthly_price < $rates[$sku_cpu]) {
+$rates[$sku_cpu] = $monthly_price;
+}
+}
+}
+if (!empty($rates)) {
+$cache_data['general'] = $rates;
+file_put_contents($cache_file, json_encode($cache_data));
+}
+}
+}
+}
+
+if (!empty($rates)) {
+ksort($rates);
+foreach ($rates as $sku_cpu => $monthly_price) {
+$sku_ram = $sku_cpu * 4;
+if ($sku_cpu >= $cpu && $sku_ram >= $ram) {
+return round($monthly_price, 2);
+}
+}
+
+$max_cpu = max(array_keys($rates));
+$base_rate = $rates[$max_cpu] / $max_cpu;
+return round($cpu * $base_rate, 2);
+}
+
+$estimated = ($cpu * 30.0) + ($ram * 4.0);
+return round($estimated, 2);
 }
 }

@@ -84,6 +84,7 @@ class CostAnalyzer extends CController {
 		$host_options = [
 			'output'            => ['hostid', 'host', 'name'],
 			'selectHostGroups'  => ['groupid', 'name'],
+			'selectTags'        => ['tag', 'value'],
 			'filter'            => ['status' => HOST_STATUS_MONITORED],
 			'monitored_hosts'   => true,
 			'preservekeys'      => true,
@@ -217,8 +218,25 @@ class CostAnalyzer extends CController {
 				'cpu_count'        => null,
 				'ram_total_gb'     => null,
 				'cpu_recommended'  => null,
-				'ram_recommended_gb' => null
+				'ram_recommended_gb' => null,
+				'is_azure'         => false,
+				'azure_sku'        => null,
+				'current_cost'     => null,
+				'recommended_cost' => null,
+				'monthly_savings'  => null
 			];
+
+			// Check if host has Azure tag and exact SKU.
+			if (isset($host['tags']) && is_array($host['tags'])) {
+				foreach ($host['tags'] as $tag) {
+					if (stripos($tag['tag'], 'azure_sku') !== false) {
+						$result['azure_sku'] = trim($tag['value'] ?? '');
+						$result['is_azure'] = true;
+					} elseif (stripos($tag['tag'], 'azure') !== false || stripos($tag['value'] ?? '', 'azure') !== false) {
+						$result['is_azure'] = true;
+					}
+				}
+			}
 
 			// Query trends for each metric.
 			if (isset($hi['cpu'])) {
@@ -317,6 +335,31 @@ class CostAnalyzer extends CController {
 
 			// Calculate right-sizing suggestion.
 			$result = $this->calculateRightSizing($result);
+
+			// Calculate Azure Costs if applicable.
+			if ($result['is_azure'] && $result['cpu_count'] !== null && $result['ram_total_gb'] !== null) {
+				$result['current_cost'] = $this->estimateAzureCost($result['cpu_count'], $result['ram_total_gb'], $result['azure_sku']);
+
+				if ($result['cpu_recommended'] !== null || $result['ram_recommended_gb'] !== null) {
+					$rec_cpu = clone $result['cpu_recommended'] ?? clone $result['cpu_count'];
+					$rec_ram = clone $result['ram_recommended_gb'] ?? clone $result['ram_total_gb'];
+					
+					// Attempt to guess the target SKU purely by replacing the CPU count string in the name.
+					$rec_sku = null;
+					if ($result['azure_sku'] !== null) {
+						$rec_sku = preg_replace('/([a-zA-Z]+)'.$result['cpu_count'].'([a-zA-Z_]+)/i', '${1}'.$rec_cpu.'${2}', $result['azure_sku']);
+						if ($rec_sku === $result['azure_sku']) {
+							$rec_sku = null; // Regex failed or didn't change anything
+						}
+					}
+
+					$result['recommended_cost'] = $this->estimateAzureCost((int)$rec_cpu, (float)$rec_ram, $rec_sku);
+
+					if ($result['current_cost'] !== null && $result['recommended_cost'] !== null && $result['current_cost'] > $result['recommended_cost']) {
+						$result['monthly_savings'] = $result['current_cost'] - $result['recommended_cost'];
+					}
+				}
+			}
 
 			$results[] = $result;
 		}
@@ -586,5 +629,116 @@ class CostAnalyzer extends CController {
 			'with_monitored_hosts' => true,
 			'preservekeys'   => true
 		]);
+	}
+
+	/**
+	 * Estimate Azure monthly cost using Retail Prices API proxy logic.
+	 * If $exact_sku is provided, queries exact Tier/family. Else uses general purpose.
+	 */
+	private function estimateAzureCost(int $cpu, float $ram, ?string $exact_sku = null): ?float {
+		if ($cpu <= 0 || $ram <= 0) return null;
+
+		$cache_file = sys_get_temp_dir() . '/zabbix_finops_azure_rates.json';
+		$cache_ttl = 86400; // 24 hours
+
+		$cache_data = ['general' => [], 'exact' => []];
+		if (file_exists($cache_file) && (time() - filemtime($cache_file)) < $cache_ttl) {
+			$raw_cache = file_get_contents($cache_file);
+			if ($raw_cache !== false) {
+				$decoded = json_decode($raw_cache, true);
+				if (is_array($decoded)) {
+					// Migration check for old cache format
+					if (isset($decoded['general'])) {
+						$cache_data = $decoded;
+					} else {
+						$cache_data['general'] = $decoded;
+					}
+				}
+			}
+		}
+
+		// Exact SKU Calculation
+		if (!empty($exact_sku)) {
+			if (isset($cache_data['exact'][$exact_sku])) {
+				return $cache_data['exact'][$exact_sku];
+			}
+
+			$url = "https://prices.azure.com/api/retail/prices?\$filter=" . urlencode("serviceName eq 'Virtual Machines' and priceType eq 'Consumption' and armSkuName eq '{$exact_sku}' and not contains(skuName, 'Spot') and not contains(skuName, 'Low Priority')");
+			
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+			curl_setopt($ch, CURLOPT_USERAGENT, 'ZabbixFinOpsToolkit/1.0');
+			$response = curl_exec($ch);
+			curl_close($ch);
+			
+			if ($response) {
+				$data = json_decode($response, true);
+				if (isset($data['Items']) && is_array($data['Items']) && !empty($data['Items'])) {
+					$monthly_price = $data['Items'][0]['retailPrice'] * 730;
+					$cache_data['exact'][$exact_sku] = round($monthly_price, 2);
+					file_put_contents($cache_file, json_encode($cache_data));
+					return $cache_data['exact'][$exact_sku];
+				}
+			}
+			
+			// Fallback to generalized if exact SKU not found
+		}
+
+		// General Purpose Dsv5/B-series Calculation
+		$rates = $cache_data['general'];
+		if (empty($rates)) {
+			$url = "https://prices.azure.com/api/retail/prices?\$filter=" . urlencode("serviceName eq 'Virtual Machines' and priceType eq 'Consumption' and armRegionName eq 'eastus' and contains(skuName, ' v5') and not contains(skuName, 'Spot') and not contains(skuName, 'Low Priority')");
+			
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL, $url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+			curl_setopt($ch, CURLOPT_USERAGENT, 'ZabbixFinOpsToolkit/1.0');
+			$response = curl_exec($ch);
+			curl_close($ch);
+			
+			if ($response) {
+				$data = json_decode($response, true);
+				if (isset($data['Items']) && is_array($data['Items'])) {
+					foreach ($data['Items'] as $item) {
+						if (isset($item['armSkuName']) && preg_match('/Standard_D(\d+)s?_?v5/i', $item['armSkuName'], $matches)) {
+							$sku_cpu = (int)$matches[1];
+							$monthly_price = $item['retailPrice'] * 730; // Approx 730 hours/month
+							
+							// Save the cheapest matching SKU for this CPU count.
+							if (!isset($rates[$sku_cpu]) || $monthly_price < $rates[$sku_cpu]) {
+								$rates[$sku_cpu] = $monthly_price;
+							}
+						}
+					}
+					if (!empty($rates)) {
+						$cache_data['general'] = $rates;
+						file_put_contents($cache_file, json_encode($cache_data));
+					}
+				}
+			}
+		}
+
+		if (!empty($rates)) {
+			ksort($rates);
+			foreach ($rates as $sku_cpu => $monthly_price) {
+				// Dsv5 standard ratio: 4GB RAM per vCPU
+				$sku_ram = $sku_cpu * 4;
+				if ($sku_cpu >= $cpu && $sku_ram >= $ram) {
+					return round($monthly_price, 2);
+				}
+			}
+			
+			// Extrapolate if specs exceed known SKUs
+			$max_cpu = max(array_keys($rates));
+			$base_rate = $rates[$max_cpu] / $max_cpu;
+			return round($cpu * $base_rate, 2);
+		}
+		
+		// Offline / Timeout Fallback: Approximation based on standard D-series pricing
+		$estimated = ($cpu * 30.0) + ($ram * 4.0);
+		return round($estimated, 2);
 	}
 }
