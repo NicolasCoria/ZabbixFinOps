@@ -33,7 +33,9 @@ class CostAnalyzer extends CController {
 	private const ITEM_KEY_NETIN     = 'net.if.in';
 	private const ITEM_KEY_NETOUT    = 'net.if.out';
 	private const ITEM_KEY_LOAD      = 'system.cpu.load';
+	private const ITEM_KEY_LOAD_WIN_SEARCH = 'Processor Queue Length';
 	private const ITEM_KEY_CPU_NUM   = 'system.cpu.num';
+	private const ITEM_KEY_CPU_NUM_WIN_SEARCH = 'NumberOfLogicalProcessors';
 	private const ITEM_KEY_RAM_TOTAL = 'vm.memory.size[total]';
 
 	// Right-sizing: recommend 80% of current allocation.
@@ -122,7 +124,9 @@ class CostAnalyzer extends CController {
 					self::ITEM_KEY_NETIN,
 					self::ITEM_KEY_NETOUT,
 					self::ITEM_KEY_LOAD,
+					self::ITEM_KEY_LOAD_WIN_SEARCH,
 					self::ITEM_KEY_CPU_NUM,
+					self::ITEM_KEY_CPU_NUM_WIN_SEARCH,
 					self::ITEM_KEY_RAM_TOTAL
 				]
 			],
@@ -168,10 +172,10 @@ class CostAnalyzer extends CController {
 			elseif (strpos($key, self::ITEM_KEY_NETOUT) === 0) {
 				$host_items[$hid]['net_out'] = $item;
 			}
-			elseif (strpos($key, self::ITEM_KEY_LOAD) === 0) {
+			elseif (strpos($key, self::ITEM_KEY_LOAD) === 0 || strpos($key, self::ITEM_KEY_LOAD_WIN_SEARCH) !== false) {
 				$host_items[$hid]['load'] = $item;
 			}
-			elseif ($key === self::ITEM_KEY_CPU_NUM) {
+			elseif ($key === self::ITEM_KEY_CPU_NUM || strpos($key, self::ITEM_KEY_CPU_NUM_WIN_SEARCH) !== false) {
 				$host_items[$hid]['cpu_num'] = $item;
 			}
 			elseif ($key === self::ITEM_KEY_RAM_TOTAL) {
