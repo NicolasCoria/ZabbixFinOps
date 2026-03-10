@@ -26,8 +26,8 @@ The module queries the Zabbix `trends` and `trends_uint` tables for the last 30 
 | Metric | Source Item Key |
 |--------|----------------|
 | CPU utilization (%) | `system.cpu.util` |
-| Memory utilization (%) | `vm.memory.utilization` or `vm.memory.size[pavailable]` (auto-inverted) |
-| Disk usage (%) | `vfs.fs.size[/,pused]` |
+| Memory utilization (%) | `vm.memory.utilization` (Linux) / `vm.memory.util` (Windows) or `vm.memory.size[pavailable]` (auto-inverted) |
+| Disk usage (%) | `vfs.fs.size[*,pused]` (Automatically tracks all partitions on Linux `/` and Windows `C:`, `D:`, etc., using the highest usage) |
 | Network In/Out | `net.if.in` / `net.if.out` |
 | Load Average | `system.cpu.load` |
 
@@ -143,7 +143,7 @@ The module recommends **80% of the current allocation** — directly, without ro
 
 - **Zabbix**: 7.0.0 to 7.4.x (tested on 7.4.7)
 - **PHP**: 8.0 or higher
-- Hosts must be monitored with standard OS templates (Linux by Zabbix Agent, etc.)
+- Hosts must be monitored with standard OS templates (Linux by Zabbix Agent, Windows by Zabbix Agent, etc.)
 - Trends data must be available (at least 1 hour of collection for trends to populate)
 
 ##  Installation
@@ -186,7 +186,7 @@ The module will appear in the menu under **Monitoring → Infrastructure Cost An
 | RAM Avg % | Average memory utilization over 30 days |
 | RAM Max % | Absolute peak memory over 30 days |
 | RAM P95 % | 95th percentile of hourly RAM peaks (ignores top 5% spikes) |
-| Disk Avg % | Average root filesystem usage |
+| Disk Avg % | Average filesystem usage (highest partition/drive) |
 | Net In / Net Out | Average network throughput |
 | Load Avg | Average system load |
 | Waste Score | How underutilized (higher = more waste) |

@@ -26,8 +26,10 @@ class CostAnalyzer extends CController {
 	// Item keys to look for.
 	private const ITEM_KEY_CPU       = 'system.cpu.util';
 	private const ITEM_KEY_RAM_UTIL  = 'vm.memory.utilization';
+	private const ITEM_KEY_RAM_UTIL_WIN = 'vm.memory.util';
 	private const ITEM_KEY_RAM_PAVAIL = 'vm.memory.size[pavailable]';
-	private const ITEM_KEY_DISK      = 'vfs.fs.size[/,pused]';
+	private const ITEM_KEY_DISK_PREFIX = 'vfs.fs.size[';
+	private const ITEM_KEY_DISK_SUFFIX = ',pused]';
 	private const ITEM_KEY_NETIN     = 'net.if.in';
 	private const ITEM_KEY_NETOUT    = 'net.if.out';
 	private const ITEM_KEY_LOAD      = 'system.cpu.load';
@@ -114,8 +116,9 @@ class CostAnalyzer extends CController {
 				'key_' => [
 					self::ITEM_KEY_CPU,
 					self::ITEM_KEY_RAM_UTIL,
+					self::ITEM_KEY_RAM_UTIL_WIN,
 					self::ITEM_KEY_RAM_PAVAIL,
-					self::ITEM_KEY_DISK,
+					self::ITEM_KEY_DISK_PREFIX,
 					self::ITEM_KEY_NETIN,
 					self::ITEM_KEY_NETOUT,
 					self::ITEM_KEY_LOAD,
@@ -130,18 +133,23 @@ class CostAnalyzer extends CController {
 
 		// Organize items by host and type.
 		// For CPU: prefer exact "system.cpu.util" (composite utilization).
-		// For RAM: prefer "vm.memory.utilization", fallback to "vm.memory.size[pavailable]" (inverted).
+		// For RAM: prefer "vm.memory.utilization" or "vm.memory.util" (Windows), fallback to "vm.memory.size[pavailable]" (inverted).
 		$host_items = [];
 		foreach ($items as $item) {
 			$hid = $item['hostid'];
 			$key = $item['key_'];
 
+			// Ensure disks array exists.
+			if (!isset($host_items[$hid]['disks'])) {
+				$host_items[$hid]['disks'] = [];
+			}
+
 			// CPU: exact match only (ignore system.cpu.util[,idle], etc.)
 			if ($key === self::ITEM_KEY_CPU) {
 				$host_items[$hid]['cpu'] = $item;
 			}
-			// RAM: vm.memory.utilization (percentage used — preferred)
-			elseif ($key === self::ITEM_KEY_RAM_UTIL) {
+			// RAM: vm.memory.utilization or vm.memory.util (percentage used — preferred)
+			elseif ($key === self::ITEM_KEY_RAM_UTIL || $key === self::ITEM_KEY_RAM_UTIL_WIN) {
 				$host_items[$hid]['ram'] = $item;
 				$host_items[$hid]['ram_inverted'] = false;
 			}
@@ -150,8 +158,9 @@ class CostAnalyzer extends CController {
 				$host_items[$hid]['ram'] = $item;
 				$host_items[$hid]['ram_inverted'] = true;
 			}
-			elseif ($key === self::ITEM_KEY_DISK) {
-				$host_items[$hid]['disk'] = $item;
+			// Disks: track all partitions ending with ",pused]"
+			elseif (strpos($key, self::ITEM_KEY_DISK_PREFIX) === 0 && substr_compare($key, self::ITEM_KEY_DISK_SUFFIX, -strlen(self::ITEM_KEY_DISK_SUFFIX)) === 0) {
+				$host_items[$hid]['disks'][] = $item;
 			}
 			elseif (strpos($key, self::ITEM_KEY_NETIN) === 0) {
 				$host_items[$hid]['net_in'] = $item;
@@ -252,9 +261,18 @@ class CostAnalyzer extends CController {
 					: $ram_trend_raw;
 			}
 
-			if (isset($hi['disk'])) {
-				$disk_data = $this->getTrendData($hi['disk'], $time_from, $now);
-				$result['disk_avg'] = $disk_data['avg'];
+			// Disk: check all disks, keep highest usage
+			if (!empty($hi['disks'])) {
+				$highest_disk_avg = null;
+				foreach ($hi['disks'] as $disk_item) {
+					$disk_data = $this->getTrendData($disk_item, $time_from, $now);
+					if ($disk_data['avg'] !== null) {
+						if ($highest_disk_avg === null || $disk_data['avg'] > $highest_disk_avg) {
+							$highest_disk_avg = $disk_data['avg'];
+						}
+					}
+				}
+				$result['disk_avg'] = $highest_disk_avg;
 			}
 
 			if (isset($hi['net_in'])) {

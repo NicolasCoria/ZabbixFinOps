@@ -19,8 +19,10 @@ private const RIGHT_SIZE_FACTOR = 0.80;
 
 private const ITEM_KEY_CPU       = 'system.cpu.util';
 private const ITEM_KEY_RAM_UTIL  = 'vm.memory.utilization';
+private const ITEM_KEY_RAM_UTIL_WIN = 'vm.memory.util';
 private const ITEM_KEY_RAM_PAVAIL = 'vm.memory.size[pavailable]';
-private const ITEM_KEY_DISK      = 'vfs.fs.size[/,pused]';
+private const ITEM_KEY_DISK_PREFIX = 'vfs.fs.size[';
+private const ITEM_KEY_DISK_SUFFIX = ',pused]';
 private const ITEM_KEY_NETIN     = 'net.if.in';
 private const ITEM_KEY_NETOUT    = 'net.if.out';
 private const ITEM_KEY_LOAD      = 'system.cpu.load';
@@ -74,8 +76,8 @@ $items = API::Item()->get([
 'hostids'     => $hostids,
 'search'      => [
 'key_' => [
-self::ITEM_KEY_CPU, self::ITEM_KEY_RAM_UTIL, self::ITEM_KEY_RAM_PAVAIL,
-self::ITEM_KEY_DISK, self::ITEM_KEY_NETIN, self::ITEM_KEY_NETOUT,
+self::ITEM_KEY_CPU, self::ITEM_KEY_RAM_UTIL, self::ITEM_KEY_RAM_UTIL_WIN, self::ITEM_KEY_RAM_PAVAIL,
+self::ITEM_KEY_DISK_PREFIX, self::ITEM_KEY_NETIN, self::ITEM_KEY_NETOUT,
 self::ITEM_KEY_LOAD, self::ITEM_KEY_CPU_NUM, self::ITEM_KEY_RAM_TOTAL
 ]
 ],
@@ -89,10 +91,14 @@ foreach ($items as $item) {
 $hid = $item['hostid'];
 $key = $item['key_'];
 
+if (!isset($host_items[$hid]['disks'])) {
+$host_items[$hid]['disks'] = [];
+}
+
 if ($key === self::ITEM_KEY_CPU) {
 $host_items[$hid]['cpu'] = $item;
 }
-elseif ($key === self::ITEM_KEY_RAM_UTIL) {
+elseif ($key === self::ITEM_KEY_RAM_UTIL || $key === self::ITEM_KEY_RAM_UTIL_WIN) {
 $host_items[$hid]['ram'] = $item;
 $host_items[$hid]['ram_inverted'] = false;
 }
@@ -100,8 +106,8 @@ elseif ($key === self::ITEM_KEY_RAM_PAVAIL && !isset($host_items[$hid]['ram'])) 
 $host_items[$hid]['ram'] = $item;
 $host_items[$hid]['ram_inverted'] = true;
 }
-elseif ($key === self::ITEM_KEY_DISK) {
-$host_items[$hid]['disk'] = $item;
+elseif (strpos($key, self::ITEM_KEY_DISK_PREFIX) === 0 && substr_compare($key, self::ITEM_KEY_DISK_SUFFIX, -strlen(self::ITEM_KEY_DISK_SUFFIX)) === 0) {
+$host_items[$hid]['disks'][] = $item;
 }
 elseif (strpos($key, self::ITEM_KEY_NETIN) === 0) {
 $host_items[$hid]['net_in'] = $item;
@@ -178,8 +184,17 @@ $ram_trend_raw = $this->calculateTrend($hi['ram'], $first_week_start, $first_wee
 $r['ram_trend'] = ($ram_inverted && $ram_trend_raw !== null) ? round(-$ram_trend_raw, 2) : $ram_trend_raw;
 }
 
-if (isset($hi['disk'])) {
-$r['disk_avg'] = $this->getTrendData($hi['disk'], $time_from, $now)['avg'];
+if (!empty($hi['disks'])) {
+$highest_disk_avg = null;
+foreach ($hi['disks'] as $disk_item) {
+$disk_data = $this->getTrendData($disk_item, $time_from, $now);
+if ($disk_data['avg'] !== null) {
+if ($highest_disk_avg === null || $disk_data['avg'] > $highest_disk_avg) {
+$highest_disk_avg = $disk_data['avg'];
+}
+}
+}
+$r['disk_avg'] = $highest_disk_avg;
 }
 if (isset($hi['net_in'])) {
 $r['net_in_avg'] = $this->getTrendData($hi['net_in'], $time_from, $now)['avg'];
