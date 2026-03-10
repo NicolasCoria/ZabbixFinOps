@@ -341,8 +341,8 @@ class CostAnalyzer extends CController {
 				$result['current_cost'] = $this->estimateAzureCost($result['cpu_count'], $result['ram_total_gb'], $result['azure_sku']);
 
 				if ($result['cpu_recommended'] !== null || $result['ram_recommended_gb'] !== null) {
-					$rec_cpu = clone $result['cpu_recommended'] ?? clone $result['cpu_count'];
-					$rec_ram = clone $result['ram_recommended_gb'] ?? clone $result['ram_total_gb'];
+					$rec_cpu = $result['cpu_recommended'] ?? $result['cpu_count'];
+					$rec_ram = $result['ram_recommended_gb'] ?? $result['ram_total_gb'];
 					
 					// Attempt to guess the target SKU purely by replacing the CPU count string in the name.
 					$rec_sku = null;

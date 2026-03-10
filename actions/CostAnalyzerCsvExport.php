@@ -242,8 +242,8 @@ if ($r['is_azure'] && $r['cpu_count'] !== null && $r['ram_total_gb'] !== null) {
 $r['current_cost'] = $this->estimateAzureCost($r['cpu_count'], $r['ram_total_gb'], $r['azure_sku']);
 
 if ($r['cpu_recommended'] !== null || $r['ram_recommended_gb'] !== null) {
-$rec_cpu = clone $r['cpu_recommended'] ?? clone $r['cpu_count'];
-$rec_ram = clone $r['ram_recommended_gb'] ?? clone $r['ram_total_gb'];
+$rec_cpu = $r['cpu_recommended'] ?? $r['cpu_count'];
+$rec_ram = $r['ram_recommended_gb'] ?? $r['ram_total_gb'];
 
 $rec_sku = null;
 if ($r['azure_sku'] !== null) {
