@@ -225,7 +225,8 @@ class CostAnalyzer extends CController {
 				'azure_sku'        => null,
 				'current_cost'     => null,
 				'recommended_cost' => null,
-				'monthly_savings'  => null
+				'monthly_savings'  => null,
+				'is_zombie'        => false
 			];
 
 			// Check if host has Azure tag and exact SKU.
@@ -334,6 +335,14 @@ class CostAnalyzer extends CController {
 
 			// Apply detection rules and generate recommendation.
 			$result['recommendation'] = $this->generateRecommendation($result);
+
+			// Zombie Detection: server is idle with near-zero CPU and network activity.
+			if ($result['cpu_avg'] !== null && $result['cpu_avg'] <= 2.0
+				&& ($result['net_in_avg'] === null || $result['net_in_avg'] <= 10240)  // 10 KB/s
+				&& ($result['net_out_avg'] === null || $result['net_out_avg'] <= 10240)) {
+				$result['is_zombie'] = true;
+				$result['recommendation'] = 'Zombie Server — CPU ~'.$result['cpu_avg'].'%, no network activity. Consider full shutdown.';
+			}
 
 			// Calculate right-sizing suggestion.
 			$result = $this->calculateRightSizing($result);

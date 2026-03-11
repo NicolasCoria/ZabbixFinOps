@@ -340,6 +340,19 @@
     border-left: 2px solid var(--fn-accent);
 }
 
+/* Zombie Server rows */
+.finops-table tr.finops-row-zombie {
+    background: rgba(202, 138, 4, 0.05);
+}
+
+.finops-table tr.finops-row-zombie:hover {
+    background: rgba(202, 138, 4, 0.1);
+}
+
+.finops-table tr.finops-row-zombie td:first-child {
+    border-left: 2px solid var(--fn-warning);
+}
+
 .finops-cell-host {
     font-family: var(--fn-font-mono);
     font-weight: 500;

@@ -76,6 +76,7 @@ $results = $data['results'];
 $total_hosts = count($results);
 $oversized_count = 0;
 $high_waste_count = 0;
+$zombie_count = 0;
 $potential_savings = 0;
 
 foreach ($results as $r) {
@@ -84,6 +85,9 @@ foreach ($results as $r) {
     }
     if ($r['waste_level'] === _('HIGH')) {
         $high_waste_count++;
+    }
+    if (!empty($r['is_zombie'])) {
+        $zombie_count++;
     }
     if (isset($r['monthly_savings']) && $r['monthly_savings'] > 0) {
         $potential_savings += $r['monthly_savings'];
@@ -117,6 +121,12 @@ $summary = (new CDiv([
         (new CSpan(_('Est. Azure Savings/mo')))->addClass('finops-stat-label'),
         (new CSpan('$' . number_format($potential_savings)))->addClass('finops-stat-value finops-text-accent')
     ]))->addClass('finops-stat-card finops-stat-card--success'),
+
+    // Zombie Servers Card
+    (new CDiv([
+        (new CSpan(_('Zombie Servers')))->addClass('finops-stat-label'),
+        (new CSpan((string)$zombie_count))->addClass('finops-stat-value')
+    ]))->addClass('finops-stat-card finops-stat-card--critical'),
 
     ]))->addClass('finops-summary-grid');
 
@@ -282,7 +292,9 @@ foreach ($results as $r) {
         : 'HEALTHY';
 
     $row_class = '';
-    if ($waste_level_raw === 'HIGH') {
+    if (!empty($r['is_zombie'])) {
+        $row_class = 'finops-row-zombie';
+    } elseif ($waste_level_raw === 'HIGH') {
         $row_class = 'finops-row-high-waste';
     }
 

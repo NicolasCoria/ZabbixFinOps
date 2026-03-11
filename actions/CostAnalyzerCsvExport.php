@@ -152,6 +152,7 @@ $r = [
 'cpu_count'  => null, 'ram_total_gb' => null,
 'cpu_recommended' => null, 'ram_recommended_gb' => null,
 'is_azure'   => false, 'azure_sku' => null, 'current_cost' => null, 'recommended_cost' => null, 'monthly_savings' => null,
+'is_zombie'  => false,
 'recommendation' => ''
 ];
 
@@ -236,6 +237,15 @@ $r['efficiency_score'] = max(0, min(100, round($avg_usage, 1)));
 }
 
 $r['recommendation'] = $this->generateRecommendation($r);
+
+// Zombie Detection.
+if ($r['cpu_avg'] !== null && $r['cpu_avg'] <= 2.0
+	&& ($r['net_in_avg'] === null || $r['net_in_avg'] <= 10240)
+	&& ($r['net_out_avg'] === null || $r['net_out_avg'] <= 10240)) {
+	$r['is_zombie'] = true;
+	$r['recommendation'] = 'Zombie Server — CPU ~'.$r['cpu_avg'].'%, no network activity. Consider full shutdown.';
+}
+
 $r = $this->calculateRightSizing($r);
 
 if ($r['is_azure'] && $r['cpu_count'] !== null && $r['ram_total_gb'] !== null) {
