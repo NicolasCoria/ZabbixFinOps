@@ -15,7 +15,16 @@ class CostAnalyzer extends CController {
 	private const CPU_MAX_THRESHOLD   = 60;
 	private const RAM_MAX_THRESHOLD   = 80;
 	private const DISK_HIGH_THRESHOLD = 85;
-	private const NET_HIGH_THRESHOLD  = 80; // percentage of theoretical max or relative threshold
+	private const NET_HIGH_THRESHOLD  = 80;
+
+	// Thresholds for saturation (Upscaling).
+	private const CPU_SATURATION_AVG = 80;
+	private const CPU_SATURATION_P95 = 90;
+	private const RAM_SATURATION_AVG = 85;
+	private const RAM_SATURATION_P95 = 95;
+
+	// Upscaling: suggest 50% increase in resources.
+	private const UPSIZE_FACTOR = 1.5;
 
 	// Analysis window: 30 days.
 	private const ANALYSIS_DAYS = 30;
@@ -210,6 +219,7 @@ class CostAnalyzer extends CController {
 				'net_in_avg' => null,
 				'net_out_avg'=> null,
 				'load_avg'   => null,
+				'is_saturated' => false,
 				'waste_score'      => null,
 				'efficiency_score' => null,
 				'cpu_trend'        => null,
@@ -521,10 +531,26 @@ class CostAnalyzer extends CController {
 	 * Generate recommendation based on detection rules.
 	 * Uses P95 peaks instead of absolute MAX to ignore rare spikes.
 	 */
-	private function generateRecommendation(array $r): string {
+	private function generateRecommendation(array &$r): string {
 		// Need at least CPU and RAM data.
 		if ($r['cpu_avg'] === null || $r['ram_avg'] === null) {
 			return _('Insufficient data for analysis.');
+		}
+
+		// Use P95 for peak evaluation (ignores rare spikes).
+		$cpu_peak = $r['cpu_p95'] ?? $r['cpu_max'];
+		$ram_peak = $r['ram_p95'] ?? $r['ram_max'];
+
+		// Check for SATURATION (Upscaling) first — performance risk is higher priority than waste.
+		$is_cpu_saturated = ($r['cpu_avg'] >= self::CPU_SATURATION_AVG || ($cpu_peak !== null && $cpu_peak >= self::CPU_SATURATION_P95));
+		$is_ram_saturated = ($r['ram_avg'] >= self::RAM_SATURATION_AVG || ($ram_peak !== null && $ram_peak >= self::RAM_SATURATION_P95));
+
+		if ($is_cpu_saturated || $is_ram_saturated) {
+			$r['is_saturated'] = true;
+			$reasons = [];
+			if ($is_cpu_saturated) $reasons[] = 'CPU';
+			if ($is_ram_saturated) $reasons[] = 'RAM';
+			return sprintf(_('🚀 Performance Risk — %s saturation detected. Consider upscaling resources by 50%%.'), implode(' & ', $reasons));
 		}
 
 		// Projection-based growth: only block downsizing if projected usage
@@ -609,7 +635,18 @@ class CostAnalyzer extends CController {
 	 * Only suggests reduction when recommended < current.
 	 */
 	private function calculateRightSizing(array $r): array {
-		// CPU: recommend 80% of current, but never below P95 actual usage. Min 1 vCPU.
+		if (!empty($r['is_saturated'])) {
+			// UPSCALING: suggest 50% increase if saturated.
+			if ($r['cpu_count'] !== null) {
+				$r['cpu_recommended'] = (int) ceil($r['cpu_count'] * self::UPSIZE_FACTOR);
+			}
+			if ($r['ram_total_gb'] !== null) {
+				$r['ram_recommended_gb'] = round($r['ram_total_gb'] * self::UPSIZE_FACTOR, 1);
+			}
+			return $r;
+		}
+
+		// DOWNSIZING: CPU recommend 80% of current, but never below P95 actual usage. Min 1 vCPU.
 		if ($r['cpu_p95'] !== null && $r['cpu_p95'] > 0 && $r['cpu_count'] !== null && $r['cpu_count'] > 0) {
 			$recommended = max(1, (int) floor($r['cpu_count'] * self::RIGHT_SIZE_FACTOR));
 			$actual_need = ($r['cpu_p95'] / 100) * $r['cpu_count'];
@@ -619,7 +656,7 @@ class CostAnalyzer extends CController {
 			}
 		}
 
-		// RAM: recommend 80% of current, but never below P95 actual usage. Min 2 GB.
+		// DOWNSIZING: RAM recommend 80% of current, but never below P95 actual usage. Min 2 GB.
 		if ($r['ram_p95'] !== null && $r['ram_p95'] > 0 && $r['ram_total_gb'] !== null && $r['ram_total_gb'] > 0) {
 			$recommended = max(2, round($r['ram_total_gb'] * self::RIGHT_SIZE_FACTOR, 1));
 			$actual_need = ($r['ram_p95'] / 100) * $r['ram_total_gb'];

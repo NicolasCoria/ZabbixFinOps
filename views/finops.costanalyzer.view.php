@@ -77,6 +77,7 @@ $total_hosts = count($results);
 $oversized_count = 0;
 $high_waste_count = 0;
 $zombie_count = 0;
+$saturated_count = 0;
 $potential_savings = 0;
 
 foreach ($results as $r) {
@@ -88,6 +89,9 @@ foreach ($results as $r) {
     }
     if (!empty($r['is_zombie'])) {
         $zombie_count++;
+    }
+    if (!empty($r['is_saturated'])) {
+        $saturated_count++;
     }
     if (isset($r['monthly_savings']) && $r['monthly_savings'] > 0) {
         $potential_savings += $r['monthly_savings'];
@@ -127,6 +131,12 @@ $summary = (new CDiv([
         (new CSpan(_('Zombie Servers')))->addClass('finops-stat-label'),
         (new CSpan((string)$zombie_count))->addClass('finops-stat-value')
     ]))->addClass('finops-stat-card finops-stat-card--critical'),
+
+    // Performance Risks Card
+    (new CDiv([
+        (new CSpan(_('Performance Risks')))->addClass('finops-stat-label'),
+        (new CSpan((string)$saturated_count))->addClass('finops-stat-value')
+    ]))->addClass('finops-stat-card finops-stat-card--info'),
 
     ]))->addClass('finops-summary-grid');
 
@@ -292,7 +302,9 @@ foreach ($results as $r) {
         : 'HEALTHY';
 
     $row_class = '';
-    if (!empty($r['is_zombie'])) {
+    if (!empty($r['is_saturated'])) {
+        $row_class = 'finops-row-saturated';
+    } elseif (!empty($r['is_zombie'])) {
         $row_class = 'finops-row-zombie';
     } elseif ($waste_level_raw === 'HIGH') {
         $row_class = 'finops-row-high-waste';

@@ -231,12 +231,20 @@
     color: var(--fn-accent);
 }
 
+.finops-stat-card--info .finops-stat-value {
+    color: #3b82f6; /* Blue */
+}
+
 .finops-stat-card--warning {
     border-left: 3px solid var(--fn-warning);
 }
 
 .finops-stat-card--critical {
     border-left: 3px solid var(--fn-accent);
+}
+
+.finops-stat-card--info {
+    border-left: 3px solid #3b82f6;
 }
 
 .finops-table-section {
@@ -351,6 +359,19 @@
 
 .finops-table tr.finops-row-zombie td:first-child {
     border-left: 2px solid var(--fn-warning);
+}
+
+/* Saturated Server rows (Upscaling) */
+.finops-table tr.finops-row-saturated {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.finops-table tr.finops-row-saturated:hover {
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.finops-table tr.finops-row-saturated td:first-child {
+    border-left: 2px solid #3b82f6;
 }
 
 .finops-cell-host {

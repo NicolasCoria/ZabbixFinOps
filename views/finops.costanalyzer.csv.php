@@ -38,6 +38,7 @@ $csv .= implode(',', [
 	'"Est. Savings/mo ($)"',
 	'"CPU Trend"',
 	'"RAM Trend"',
+	'"Is Zombie?"',
 	'"Recommendation"'
 ])."\n";
 
@@ -83,6 +84,7 @@ foreach ($data['results'] as $r) {
 		($r['monthly_savings'] !== null) ? $r['monthly_savings'] : '',
 		($r['cpu_trend'] !== null) ? $r['cpu_trend'] : '',
 		($r['ram_trend'] !== null) ? $r['ram_trend'] : '',
+		(!empty($r['is_zombie'])) ? 'Yes' : 'No',
 		'"'.str_replace('"', '""', $r['recommendation']).'"'
 	])."\n";
 }

@@ -17,6 +17,12 @@ private const RAM_MAX_THRESHOLD   = 80;
 private const DISK_HIGH_THRESHOLD = 85;
 private const RIGHT_SIZE_FACTOR = 0.80;
 
+private const CPU_SATURATION_AVG = 80;
+private const CPU_SATURATION_P95 = 90;
+private const RAM_SATURATION_AVG = 85;
+private const RAM_SATURATION_P95 = 95;
+private const UPSIZE_FACTOR = 1.5;
+
 private const ITEM_KEY_CPU       = 'system.cpu.util';
 private const ITEM_KEY_RAM_UTIL  = 'vm.memory.utilization';
 private const ITEM_KEY_RAM_UTIL_WIN = 'vm.memory.util';
@@ -153,6 +159,7 @@ $r = [
 'cpu_recommended' => null, 'ram_recommended_gb' => null,
 'is_azure'   => false, 'azure_sku' => null, 'current_cost' => null, 'recommended_cost' => null, 'monthly_savings' => null,
 'is_zombie'  => false,
+'is_saturated' => false,
 'recommendation' => ''
 ];
 
@@ -360,6 +367,12 @@ return round((float) $row_last['avg_val'] - (float) $row_first['avg_val'], 2);
 }
 
 private function calculateRightSizing(array $r): array {
+if (!empty($r['is_saturated'])) {
+if ($r['cpu_count'] !== null) $r['cpu_recommended'] = (int) ceil($r['cpu_count'] * self::UPSIZE_FACTOR);
+if ($r['ram_total_gb'] !== null) $r['ram_recommended_gb'] = round($r['ram_total_gb'] * self::UPSIZE_FACTOR, 1);
+return $r;
+}
+
 if ($r['cpu_p95'] !== null && $r['cpu_p95'] > 0 && $r['cpu_count'] !== null && $r['cpu_count'] > 0) {
 $recommended = max(1, (int) floor($r['cpu_count'] * self::RIGHT_SIZE_FACTOR));
 $actual_need = ($r['cpu_p95'] / 100) * $r['cpu_count'];
@@ -381,9 +394,18 @@ $r['ram_recommended_gb'] = $recommended;
 return $r;
 }
 
-private function generateRecommendation(array $r): string {
+private function generateRecommendation(array &$r): string {
 if ($r['cpu_avg'] === null || $r['ram_avg'] === null) {
 return 'Insufficient data';
+}
+
+$cpu_peak = $r['cpu_p95'] ?? $r['cpu_max'];
+$ram_peak = $r['ram_p95'] ?? $r['ram_max'];
+
+if (($r['cpu_avg'] >= self::CPU_SATURATION_AVG || ($cpu_peak !== null && $cpu_peak >= self::CPU_SATURATION_P95))
+	|| ($r['ram_avg'] >= self::RAM_SATURATION_AVG || ($ram_peak !== null && $ram_peak >= self::RAM_SATURATION_P95))) {
+	$r['is_saturated'] = true;
+	return '🚀 Performance Risk — Saturation detected. Consider upscaling resources by 50%.';
 }
 
 $growth_blocking = false;
