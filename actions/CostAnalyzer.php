@@ -47,10 +47,11 @@ class CostAnalyzer extends CController {
 
 	protected function checkInput(): bool {
 		$fields = [
-			'filter_groupids' => 'array',
-			'sort'            => 'in waste_score,efficiency_score,cpu_avg,ram_avg,host_name',
-			'sortorder'       => 'in ASC,DESC',
-			'page'            => 'ge 1'
+			'filter_groupids'   => 'array',
+			'filter_azure_costs'=> 'in 0,1',
+			'sort'              => 'in waste_score,efficiency_score,cpu_avg,ram_avg,host_name',
+			'sortorder'         => 'in ASC,DESC',
+			'page'              => 'ge 1'
 		];
 
 		$ret = $this->validateInput($fields);
@@ -67,9 +68,10 @@ class CostAnalyzer extends CController {
 	}
 
 	protected function doAction(): void {
-		$filter_groupids = $this->getInput('filter_groupids', []);
-		$sort = $this->getInput('sort', 'waste_score');
-		$sortorder = $this->getInput('sortorder', 'DESC');
+		$filter_groupids    = $this->getInput('filter_groupids', []);
+		$filter_azure_costs = (bool) $this->getInput('filter_azure_costs', 0);
+		$sort               = $this->getInput('sort', 'waste_score');
+		$sortorder          = $this->getInput('sortorder', 'DESC');
 
 		$now = time();
 		$time_from = $now - (self::ANALYSIS_DAYS * 86400);
@@ -336,8 +338,8 @@ class CostAnalyzer extends CController {
 			// Calculate right-sizing suggestion.
 			$result = $this->calculateRightSizing($result);
 
-			// Calculate Azure Costs if applicable.
-			if ($result['is_azure'] && $result['cpu_count'] !== null && $result['ram_total_gb'] !== null) {
+			// Calculate Azure Costs only when explicitly enabled.
+			if ($filter_azure_costs && $result['is_azure'] && $result['cpu_count'] !== null && $result['ram_total_gb'] !== null) {
 				$result['current_cost'] = $this->estimateAzureCost($result['cpu_count'], $result['ram_total_gb'], $result['azure_sku']);
 
 				if ($result['cpu_recommended'] !== null || $result['ram_recommended_gb'] !== null) {
@@ -381,12 +383,13 @@ class CostAnalyzer extends CController {
 		});
 
 		$data = [
-			'results'         => $results,
-			'host_groups'     => $this->getHostGroups(),
-			'filter_groupids' => $filter_groupids,
-			'sort'            => $sort,
-			'sortorder'       => $sortorder,
-			'active_tab'      => 1
+			'results'              => $results,
+			'host_groups'          => $this->getHostGroups(),
+			'filter_groupids'      => $filter_groupids,
+			'filter_azure_costs'   => $filter_azure_costs,
+			'sort'                 => $sort,
+			'sortorder'            => $sortorder,
+			'active_tab'           => 1
 		];
 
 		$response = new CControllerResponseData($data);

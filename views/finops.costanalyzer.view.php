@@ -48,6 +48,15 @@ $filter_form->addItem([
             ]))->setWidth(ZBX_TEXTAREA_FILTER_STANDARD_WIDTH)
         ))->addClass('finops-filter-select-wrapper')
     ]))->addClass('finops-filter-group'),
+    (new CDiv([
+        (new CLabel(_('Calculate Azure Costs'), 'filter_azure_costs'))
+            ->addClass('finops-filter-label'),
+        (new CDiv(
+            (new CCheckBox('filter_azure_costs', '1'))
+                ->setChecked(!empty($data['filter_azure_costs']))
+                ->setId('filter_azure_costs')
+        ))->addClass('finops-filter-select-wrapper')
+    ]))->addClass('finops-filter-group'),
     (new CSubmitButton(_('Apply Filter'), 'filter_apply', '1'))
         ->addClass('finops-btn finops-btn-primary')
 ]);
@@ -81,6 +90,7 @@ foreach ($results as $r) {
     }
 }
 $potential_savings = round($potential_savings, 0);
+$show_azure_costs = !empty($data['filter_azure_costs']);
 
 // Summary cards grid.
 $summary = (new CDiv([
@@ -161,10 +171,16 @@ $header = [
     (new CColHeader(_('vCPU Rec.')))->addClass('finops-text-mono finops-text-right'),
     (new CColHeader(_('RAM')))->addClass('finops-text-mono finops-text-right'),
     (new CColHeader(_('RAM Rec.')))->addClass('finops-text-mono finops-text-right'),
-    (new CColHeader(_('Est. Savings/mo')))->addClass('finops-text-mono finops-text-right'),
-    (new CColHeader(_('Trend')))->addClass('finops-text-mono'),
-    (new CColHeader(_('Recommendation')))->addClass('finops-text-mono'),
 ];
+
+if ($show_azure_costs) {
+    $header[] = (new CColHeader(_('Azure SKU')))->addClass('finops-text-mono');
+    $header[] = (new CColHeader(_('Est. Cost/mo')))->addClass('finops-text-mono finops-text-right');
+    $header[] = (new CColHeader(_('Est. Savings/mo')))->addClass('finops-text-mono finops-text-right');
+}
+
+$header[] = (new CColHeader(_('Trend')))->addClass('finops-text-mono');
+$header[] = (new CColHeader(_('Recommendation')))->addClass('finops-text-mono');
 
 $table = (new CTableInfo())
     ->setHeader($header)
@@ -338,16 +354,39 @@ foreach ($results as $r) {
                 ? (new CSpan($r['ram_recommended_gb'].' GB'))->addClass('finops-cell-metric finops-cell-metric--low')
                 : (new CSpan('—'))->addClass('finops-cell-metric--na')
         ))->addClass('finops-cell-metric'),
-        (new CCol(
-            ($r['monthly_savings'] !== null)
-                ? (new CSpan('$'.number_format($r['monthly_savings'], 2)))->addClass('finops-cell-metric finops-cell-metric--success')
-                : (new CSpan('N/A'))->addClass('finops-cell-metric--na')
-        ))->addClass('finops-cell-metric'),
-        (new CCol(getTrendBrutalist($r['cpu_trend'], $r['ram_trend']))),
-        (new CCol(
-            (new CSpan($r['recommendation']))->addClass('finops-recommendation')
-        )),
     ]);
+
+    if ($show_azure_costs) {
+        // Azure SKU column: shows which tier was used for pricing.
+        $row->addItem(
+            (new CCol(
+                ($r['is_azure'])
+                    ? (new CSpan(!empty($r['azure_sku']) ? $r['azure_sku'] : _('General (Dsv5)')))
+                        ->addClass(!empty($r['azure_sku']) ? 'finops-cell-metric finops-cell-metric--low' : 'finops-text-muted')
+                    : (new CSpan('—'))->addClass('finops-cell-metric--na')
+            ))->addClass('finops-cell-metric')
+        );
+        // Estimated current monthly cost.
+        $row->addItem(
+            (new CCol(
+                ($r['current_cost'] !== null)
+                    ? (new CSpan('$'.number_format($r['current_cost'], 2)))->addClass('finops-cell-metric')
+                    : (new CSpan('N/A'))->addClass('finops-cell-metric--na')
+            ))->addClass('finops-cell-metric')
+        );
+        $row->addItem(
+            (new CCol(
+                ($r['monthly_savings'] !== null)
+                    ? (new CSpan('$'.number_format($r['monthly_savings'], 2)))->addClass('finops-cell-metric finops-cell-metric--success')
+                    : (new CSpan('N/A'))->addClass('finops-cell-metric--na')
+            ))->addClass('finops-cell-metric')
+        );
+    }
+
+    $row->addItem((new CCol(getTrendBrutalist($r['cpu_trend'], $r['ram_trend']))));
+    $row->addItem((new CCol(
+        (new CSpan($r['recommendation']))->addClass('finops-recommendation')
+    )));
 
     if ($row_class) {
         $row->addClass($row_class);
